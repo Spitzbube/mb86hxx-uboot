@@ -6,6 +6,10 @@
 # Normal rules
 #
 
+CVS
+.project
+.cproject
+
 *.rej
 *.orig
 *.a

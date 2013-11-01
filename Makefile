@@ -3314,6 +3314,9 @@ smdk6400_config	:	unconfig
 	fi
 	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
 
+mb86h60_stb_config: unconfig
+	@$(MKCONFIG) $(@:_config=) arm arm1176 mb86h60_stb fujitsu mb86h60
+
 #========================================================================
 # i386
 #========================================================================

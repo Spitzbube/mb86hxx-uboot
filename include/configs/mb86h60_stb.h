@@ -1,0 +1,36 @@
+
+#ifndef MB86H60_STB_H_
+#define MB86H60_STB_H_
+
+#define CONFIG_MACH_FUJITSU_TVSTBSOC_MB86HXX_H60
+#include <asm/arch/mb86hxx.h>
+
+#define CONFIG_SYS_SDRAM_BASE		0x20000000
+#define CONFIG_SYS_LOAD_ADDR            0x22e08000 //0x20000000
+#define CONFIG_SYS_UBOOT_BASE		TEXT_BASE	//0x23F00000
+
+#define CONFIG_NR_DRAM_BANKS		1
+
+/* Serial Driver Info */
+#define CONFIG_PL011_SERIAL
+#define CONFIG_PL011_CLOCK		MB86HXX_APB_HZ //81000000
+#define CONFIG_PL01x_PORTS		{(void*) MB86HXX_UART0_BASE} //0xc2000000}
+#define CONFIG_CONS_INDEX		0
+#define CONFIG_BAUDRATE			115200
+#define CONFIG_SYS_BAUDRATE_TABLE	{ 9600, 19200, 38400, 57600, 115200 }
+
+/* Flash and environment info */
+#define CONFIG_SYS_NO_FLASH
+#define CONFIG_ENV_IS_NOWHERE
+#define CONFIG_ENV_SIZE				8192
+
+#define CONFIG_SYS_PROMPT		"MB86H60 > "
+#define CONFIG_SYS_CBSIZE		256		/* Console I/O Buffer Size    */
+#define CONFIG_SYS_PBSIZE		384		/* Print Buffer Size          */
+
+#define CONFIG_SYS_MAXARGS		16
+
+#define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE + 128*1024)
+#define CONFIG_SYS_GBL_DATA_SIZE	128
+
+#endif /* MB86H60_STB_H_ */
