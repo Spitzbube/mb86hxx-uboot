@@ -22,18 +22,25 @@
  */
 
 #include <common.h>
+#include <asm/io.h>
 #include <asm/arch/mb86hxx.h>
 
 
-#define iowrite32(val, addr) (*(volatile unsigned int *)(addr) = (val))
-#define ioread32(addr) (*(volatile unsigned int *)(addr))
+flash_info_t	flash_info[CONFIG_SYS_MAX_FLASH_BANKS]; /* info for FLASH chips */
 
 
 int board_init(void)
 {
 	//gpio configuration
-	iowrite32(2+32, MB86HXX_GPIO_BASE+0x200+4*21); //UART0_RXDATA = 21 => GPIO 32 (in)
-	iowrite32(23, MB86HXX_GPIO_BASE+4*33); //UART0_TXDATA = 23 => GPIO 33 (out)
+	writel(2+32, MB86HXX_GPIO_BASE+0x200+4*21); //UART0_RXDATA = 21 => GPIO 32 (in)
+	writel(23, MB86HXX_GPIO_BASE+4*33); //UART0_TXDATA = 23 => GPIO 33 (out)
+
+	//flash configuration
+    writel(2+43,  MB86HXX_GPIO_BASE+0x200+4*2); //SFLASH_DATA_in = 2 => GPIO 43 (in)
+    writel(49, MB86HXX_GPIO_BASE+4*44); //SFLASH_HOLD = 49 => GPIO 44 (out)
+    writel(50, MB86HXX_GPIO_BASE+4*45); //SFLASH_CS = 50 => GPIO 45 (out)
+    writel(51, MB86HXX_GPIO_BASE+4*46); //SFLASH_CLK = 51 => GPIO 46 (out)
+    writel(52, MB86HXX_GPIO_BASE+4*47); //SFLASH_DATA_OUT = 52 => GPIO 47 (out)
 
 	return 0;
 }
@@ -43,4 +50,16 @@ int dram_init(void)
 
 	return 0;
 }
+
+unsigned long flash_init(void)
+{
+	return 0x400000; //4MB
+}
+
+int write_buff (flash_info_t *info, uchar *src, ulong addr, ulong cnt)
+{
+	printf ("write_buff\n");
+}
+
+
 

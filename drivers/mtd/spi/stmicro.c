@@ -136,15 +136,21 @@ static int stmicro_wait_ready(struct spi_flash *flash, unsigned long timeout)
 	u8 cmd = CMD_M25PXX_RDSR;
 	u8 status;
 
+#ifndef CONFIG_MB86HXX_SFLASH
 	ret = spi_xfer(spi, 8, &cmd, NULL, SPI_XFER_BEGIN);
 	if (ret) {
 		debug("SF: Failed to send command %02x: %d\n", cmd, ret);
 		return ret;
 	}
+#endif
 
 	timebase = get_timer(0);
 	do {
+#ifndef CONFIG_MB86HXX_SFLASH
 		ret = spi_xfer(spi, 8, NULL, &status, 0);
+#else
+		ret = spi_flash_cmd(spi, cmd, &status, sizeof(status));
+#endif
 		if (ret)
 			return -1;
 
@@ -153,7 +159,9 @@ static int stmicro_wait_ready(struct spi_flash *flash, unsigned long timeout)
 
 	} while (get_timer(timebase) < timeout);
 
+#ifndef CONFIG_MB86HXX_SFLASH
 	spi_xfer(spi, 0, NULL, NULL, SPI_XFER_END);
+#endif
 
 	if ((status & STMICRO_SR_WIP) == 0)
 		return 0;
