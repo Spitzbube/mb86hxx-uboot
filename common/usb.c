@@ -56,6 +56,7 @@
 #endif
 
 #undef USB_DEBUG
+/*#define USB_DEBUG*/
 
 #ifdef	USB_DEBUG
 #define	USB_PRINTF(fmt, args...)	printf(fmt , ##args)

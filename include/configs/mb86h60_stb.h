@@ -51,9 +51,17 @@
 #define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE + 128*1024)
 #define CONFIG_SYS_GBL_DATA_SIZE	128
 
+#define CONFIG_MUSB_HCD
+#define CONFIG_USB_MB86HXX
+#define CONFIG_USB_STORAGE
+#define CONFIG_DOS_PARTITION
+
 //#include <config_cmd_default.h>
 #define CONFIG_CMD_MEMORY	/* md mm nm mw cp cmp crc base loop mtest */
 #define CONFIG_CMD_SF
 #define CONFIG_CMD_SAVEENV
+#define CONFIG_CMD_USB
+#define CONFIG_CMD_FAT
+#define CONFIG_CMD_ELF
 
 #endif /* MB86H60_STB_H_ */

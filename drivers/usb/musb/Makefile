@@ -31,6 +31,7 @@ COBJS-$(CONFIG_USB_BLACKFIN) += blackfin_usb.o
 COBJS-$(CONFIG_USB_DAVINCI) += davinci.o
 COBJS-$(CONFIG_USB_OMAP3) += omap3.o
 COBJS-$(CONFIG_USB_DA8XX) += da8xx.o
+COBJS-$(CONFIG_USB_MB86HXX) += mb86hxx.o
 
 COBJS	:= $(COBJS-y)
 SRCS	:= $(COBJS:.o=.c)

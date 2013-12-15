@@ -1071,6 +1071,7 @@ int usb_lowlevel_init(void)
 {
 	u8  power;
 	u32 timeout;
+	u16 hwvers;
 
 	musb_rh_init();
 
@@ -1079,6 +1080,12 @@ int usb_lowlevel_init(void)
 
 	/* Configure all the endpoint FIFO's and start usb controller */
 	musbr = musb_cfg.regs;
+
+	hwvers = readw(&musbr->hwvers);
+	printf("hwvers: 0x%x (%d.%d)\n", hwvers,
+			((hwvers & 0x7c00) >> 10) & 0xFF,
+			hwvers & 0x3ff);
+
 	musb_configure_ep(&epinfo[0],
 			sizeof(epinfo) / sizeof(struct musb_epinfo));
 	musb_start();
@@ -1098,14 +1105,23 @@ int usb_lowlevel_init(void)
 
 	/* start usb bus reset */
 	power = readb(&musbr->power);
+
+//	printf("usb_lowlevel_init: usb reset start\n");
+
 	writeb(power | MUSB_POWER_RESET, &musbr->power);
 
 	/* After initiating a usb reset, wait for about 20ms to 30ms */
 	udelay(30000);
+//	printf("usb_lowlevel_init: usb reset delay\n");
 
 	/* stop usb bus reset */
 	power = readb(&musbr->power);
 	power &= ~MUSB_POWER_RESET;
+
+//	power &= ~MUSB_POWER_HSENAB;
+
+//	printf("usb_lowlevel_init: usb reset end\n");
+
 	writeb(power, &musbr->power);
 
 	/* Determine if the connected device is a high/full/low speed device */

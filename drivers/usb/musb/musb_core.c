@@ -34,6 +34,7 @@ void musb_start(void)
 {
 #if defined(CONFIG_MUSB_HCD)
 	u8 devctl;
+	u8 busctl;
 #endif
 
 	/* disable all interrupts */
@@ -45,6 +46,12 @@ void musb_start(void)
 	/* put into basic highspeed mode and start session */
 	writeb(MUSB_POWER_HSENAB, &musbr->power);
 #if defined(CONFIG_MUSB_HCD)
+	/* Program PHY to use EXT VBUS if required */
+	if (musb_cfg.extvbus == 1) {
+		busctl = musb_read_ulpi_buscontrol(musbr);
+		musb_write_ulpi_buscontrol(musbr, busctl | ULPI_USE_EXTVBUS);
+	}
+
 	devctl = readb(&musbr->devctl);
 	writeb(devctl | MUSB_DEVCTL_SESSION, &musbr->devctl);
 #endif
@@ -126,6 +133,8 @@ void write_fifo(u8 ep, u32 length, void *fifo_data)
 {
 	u8  *data = (u8 *)fifo_data;
 
+//	serial_printf("write_fifo: ep=%d, length=%d\n", ep, length);
+
 	/* select the endpoint index */
 	writeb(ep, &musbr->index);
 
@@ -133,6 +142,36 @@ void write_fifo(u8 ep, u32 length, void *fifo_data)
 	while (length--)
 		writeb(*data++, &musbr->fifox[ep]);
 }
+
+#if defined(CONFIG_USB_MB86HXX)
+/*
+ * This function reads data from endpoint fifo
+ *
+ * ep           - endpoint number
+ * length       - number of bytes to read from FIFO
+ * fifo_data    - pointer to data buffer into which data is read
+ */
+__attribute__((weak))
+void read_fifo(u8 ep, u32 length, void *fifo_data)
+{
+	u8  *data = (u8 *)fifo_data;
+	unsigned offset = 0x20 + ep*4;
+
+//	serial_printf("read_fifo: ep=%d, length=%d\n", ep, length);
+
+	/* select the endpoint index */
+	writeb(ep, &musbr->index);
+
+	*((volatile unsigned*)(MB86HXX_USB_MODE)) = MB86HXX_USB_1BYTE_ACCESS<<1;
+
+	/* read the data to the fifo */
+	while (length--)
+	{
+		*data++ = *((volatile unsigned*)(MB86HXX_USB0_BASE + (offset<<2)));
+	}
+}
+
+#else
 
 /*
  * This function reads data from endpoint fifo
@@ -153,3 +192,5 @@ void read_fifo(u8 ep, u32 length, void *fifo_data)
 	while (length--)
 		*data++ = readb(&musbr->fifox[ep]);
 }
+
+#endif

@@ -42,6 +42,10 @@
 # include "blackfin_usb.h"
 #endif
 
+#ifdef CONFIG_USB_MB86HXX
+# include "mb86hxx.h"
+#endif
+
 #define MUSB_EP0_FIFOSIZE	64	/* This is non-configurable */
 
 /* EP0 */
@@ -78,41 +82,44 @@ struct musb_epN_regs {
 #ifndef musb_regs
 struct musb_regs {
 	/* common registers */
-	u8	faddr;
-	u8	power;
-	u16	intrtx;
-	u16	intrrx;
-	u16	intrtxe;
-	u16	intrrxe;
-	u8	intrusb;
-	u8	intrusbe;
-	u16	frame;
-	u8	index;
-	u8	testmode;
+	u8	faddr; //0x00
+	u8	power; //0x01
+	u16	intrtx; //0x02
+	u16	intrrx; //0x04
+	u16	intrtxe; //0x06
+	u16	intrrxe; //0x08
+	u8	intrusb; //0x0A
+	u8	intrusbe; //0x0B
+	u16	frame; //0x0C
+	u8	index; //0x0E
+	u8	testmode; //0x0F
 	/* indexed registers */
-	u16	txmaxp;
-	u16	txcsr;
-	u16	rxmaxp;
-	u16	rxcsr;
-	u16	rxcount;
-	u8	txtype;
-	u8	txinterval;
-	u8	rxtype;
-	u8	rxinterval;
-	u8	reserved0;
-	u8	fifosize;
+	u16	txmaxp; //0x10
+	u16	txcsr; //0x12
+	u16	rxmaxp; //0x14
+	u16	rxcsr; //0x16
+	u16	rxcount; //0x18
+	u8	txtype; //0x1A
+	u8	txinterval; //0x1B
+	u8	rxtype; //0x1C
+	u8	rxinterval; //0x1D
+	u8	reserved0; //0x1E
+	u8	fifosize; //0x1F
 	/* fifo */
-	u32	fifox[16];
+	u32	fifox[16]; //0x20
 	/* OTG, dynamic FIFO, version & vendor registers */
-	u8	devctl;
-	u8	reserved1;
-	u8	txfifosz;
-	u8	rxfifosz;
-	u16	txfifoadd;
-	u16	rxfifoadd;
-	u32	vcontrol;
-	u16	hwvers;
-	u16	reserved2[5];
+	u8	devctl; //0x60
+	u8	reserved1; //0x61
+	u8	txfifosz; //0x62
+	u8	rxfifosz; //0x63
+	u16	txfifoadd; //0x64
+	u16	rxfifoadd; //0x66
+	u32	vcontrol; //0x68
+	u16	hwvers; //0x6c
+	u16	reserved2a[1]; //0x6e
+	u8	ulpi_busctl; //0x70
+	u8	reserved2b[1];
+	u16	reserved2[3];
 	u8	epinfo;
 	u8	raminfo;
 	u8	linkinfo;
@@ -180,6 +187,10 @@ struct musb_regs {
 #define MUSB_DEVCTL_HM		0x04
 #define MUSB_DEVCTL_HR		0x02
 #define MUSB_DEVCTL_SESSION	0x01
+
+/* ULPI VBUSCONTROL */
+#define ULPI_USE_EXTVBUS	0x01
+#define ULPI_USE_EXTVBUSIND	0x02
 
 /* TESTMODE */
 #define MUSB_TEST_FORCE_HOST	0x80
@@ -341,6 +352,7 @@ struct musb_config {
 	struct	musb_regs	*regs;
 	u32			timeout;
 	u8			musb_speed;
+	u8			extvbus;
 };
 
 /* externally defined data */
@@ -361,6 +373,105 @@ extern void read_fifo(u8 ep, u32 length, void *fifo_data);
 # define readb(addr)     (u8)bfin_read16(addr)
 # undef  writeb
 # define writeb(b, addr) bfin_write16(addr, b)
+# undef MUSB_TXCSR_MODE /* not supported */
+# define MUSB_TXCSR_MODE 0
+/*
+ * The USB PHY on current Blackfin processors is a UTMI+ level 2 PHY.
+ * However, it has no ULPI support - so there are no registers at all.
+ * That means accesses to ULPI_BUSCONTROL have to be abstracted away.
+ */
+static inline u8 musb_read_ulpi_buscontrol(struct musb_regs *musbr)
+{
+	return 0;
+}
+static inline void musb_write_ulpi_buscontrol(struct musb_regs *musbr, u8 val)
+{}
+#else
+static inline u8 musb_read_ulpi_buscontrol(struct musb_regs *musbr)
+{
+	return readb(&musbr->ulpi_busctl);
+}
+static inline void musb_write_ulpi_buscontrol(struct musb_regs *musbr, u8 val)
+{
+	writeb(val, &musbr->ulpi_busctl);
+}
 #endif
+
+#if defined(CONFIG_USB_MB86HXX)
+
+#undef readb
+static inline u8 readb(const void *addr)
+{
+	u8 data;
+	unsigned offset = (unsigned)addr - MB86HXX_USB0_BASE;
+
+#if 1
+	*((volatile unsigned*)(MB86HXX_USB_MODE)) = MB86HXX_USB_1BYTE_ACCESS<<1;
+	data = *((volatile unsigned*)(MB86HXX_USB0_BASE + (offset<<2)));
+#else
+	mb86hxx_writeb(MB86HXX_USB_2BYTE_ACCESS<<1,MB86HXX_USB_MODE);
+    data = __raw_readw(addr + (offset<<2));
+#endif
+
+//    serial_printf("readb(0x%x) -> 0x%x\n", offset, data);
+
+	return ( data );
+}
+
+#undef readw
+static inline u16 readw(const void *addr)
+{
+	u16 data;
+	unsigned offset = (unsigned)addr - MB86HXX_USB0_BASE;
+
+#if 1
+	*((volatile unsigned*)(MB86HXX_USB_MODE)) = MB86HXX_USB_2BYTE_ACCESS<<1;
+	data = *((volatile unsigned*)(MB86HXX_USB0_BASE + (offset<<2)));
+#else
+	mb86hxx_writeb(MB86HXX_USB_2BYTE_ACCESS<<1,MB86HXX_USB_MODE);
+    data = __raw_readw(addr + (offset<<2));
+#endif
+
+//    serial_printf("readw(0x%x) -> 0x%x\n", offset, data);
+
+	return ( data );
+}
+
+#undef writeb
+static inline void writeb(u8 data, const void *addr)
+{
+	unsigned offset = (unsigned)addr - MB86HXX_USB0_BASE;
+
+//    serial_printf("writeb(0x%x) <- 0x%x\n", offset, data);
+
+#if 1
+	*((volatile unsigned*)(MB86HXX_USB_MODE)) = MB86HXX_USB_1BYTE_ACCESS<<1;
+	*((volatile unsigned*)(MB86HXX_USB0_BASE + (offset<<2))) = data;
+#else
+	mb86hxx_writeb(MB86HXX_USB_2BYTE_ACCESS<<1,MB86HXX_USB_MODE);
+    data = __raw_readw(addr + (offset<<2));
+#endif
+}
+
+#undef writew
+static inline void writew(u16 data, const void *addr)
+{
+	unsigned offset = (unsigned)addr - MB86HXX_USB0_BASE;
+
+//    serial_printf("writew(0x%x) <- 0x%x\n", offset, data);
+
+#if 1
+	*((volatile unsigned*)(MB86HXX_USB_MODE)) = MB86HXX_USB_2BYTE_ACCESS<<1;
+	*((volatile unsigned*)(MB86HXX_USB0_BASE + (offset<<2))) = data;
+#else
+	mb86hxx_writeb(MB86HXX_USB_2BYTE_ACCESS<<1,MB86HXX_USB_MODE);
+    data = __raw_readw(addr + (offset<<2));
+#endif
+}
+
+#undef readl
+#undef writel
+
+#endif /* CONFIG_USB_MB86HXX */
 
 #endif	/* __MUSB_HDRC_DEFS_H__ */
